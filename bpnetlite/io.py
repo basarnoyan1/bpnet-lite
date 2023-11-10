@@ -6,6 +6,8 @@ import numpy
 import torch
 import pandas
 
+import wandb
+
 import pyfaidx
 import pyBigWig
 
