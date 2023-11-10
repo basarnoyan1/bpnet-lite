@@ -23,6 +23,7 @@ setup(
         "logomaker",
         "captum == 0.5.0",
         "seaborn >= 0.11.2",
-        "modisco-lite >= 2.0.0"
+        "modisco-lite >= 2.0.0",
+        "wandb"
     ],
 )
