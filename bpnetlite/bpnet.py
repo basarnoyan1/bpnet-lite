@@ -24,11 +24,6 @@ from tqdm import tqdm
 
 torch.backends.cudnn.benchmark = True
 
-wandb.init(
-    project="bpnet-lite-test",
-)
-
-
 class BPNet(torch.nn.Module):
 	"""A basic BPNet model with stranded profile and total count prediction.
 
@@ -132,8 +127,13 @@ class BPNet(torch.nn.Module):
 		self.n_outputs = n_outputs
 		self.n_control_tracks = n_control_tracks
   
+
 		wandb.config.n_filters = n_filters
 		wandb.config.n_layers = n_layers
+		wandb.config.profile_output_bias = profile_output_bias
+		wandb.config.count.output_bias = count_output_bias
+		wandb.config.name = name
+		wandb.config.alpha = alpha
 		wandb.config.n_outputs = n_outputs
 		wandb.config.n_control_tracks = n_control_tracks
 
@@ -333,6 +333,8 @@ class BPNet(torch.nn.Module):
 			Whether to print out the training and evaluation statistics during
 			training. Default is True.
 		"""
+  
+		wandb.config.max_epochs = max_epochs
 
 		if X_valid is not None:
 			X_valid = X_valid.cuda()
@@ -340,7 +342,6 @@ class BPNet(torch.nn.Module):
 
 		if X_ctl_valid is not None:
 			X_ctl_valid = X_ctl_valid.cuda()
-
 
 		iteration = 0
 		early_stop_count = 0
@@ -421,7 +422,6 @@ class BPNet(torch.nn.Module):
 						wandb.log({
           					"epoch": epoch, 
                  			"iteration": iteration, 	
-                    		"batch-size": batch_size, 
                       		"train_time": train_time, 
                         	"valid_time": valid_time, 
                          	"training_mnll": profile_loss_, 

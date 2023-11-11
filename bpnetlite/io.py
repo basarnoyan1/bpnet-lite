@@ -525,6 +525,8 @@ def PeakGenerator(loci, sequences, signals, controls=None, chroms=None,
 	X: torch.utils.data.DataLoader
 		A PyTorch DataLoader wrapped DataGenerator object.
 	"""
+ 
+	
 
 	X = extract_loci(loci=loci, sequences=sequences, signals=signals, 
 		controls=controls, chroms=chroms, in_window=in_window, 
