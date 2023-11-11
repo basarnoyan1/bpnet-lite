@@ -26,8 +26,6 @@ torch.backends.cudnn.benchmark = True
 
 wandb.init(
     project="bpnet-lite-test",
-    config={
-    }
 )
 
 
@@ -128,10 +126,16 @@ class BPNet(torch.nn.Module):
 		n_control_tracks=2, alpha=1, profile_output_bias=True, 
 		count_output_bias=True, name=None, trimming=None, verbose=True):
 		super(BPNet, self).__init__()
+  
 		self.n_filters = n_filters
 		self.n_layers = n_layers
 		self.n_outputs = n_outputs
 		self.n_control_tracks = n_control_tracks
+  
+		wandb.config.n_filters = n_filters
+		wandb.config.n_layers = n_layers
+		wandb.config.n_outputs = n_outputs
+		wandb.config.n_control_tracks = n_control_tracks
 
 		self.alpha = alpha
 		self.name = name or "bpnet.{}.{}".format(n_filters, n_layers)
@@ -414,7 +418,19 @@ class BPNet(torch.nn.Module):
 							measures['count_mse'].mean().item(),
 							(valid_loss < best_loss).item()])
 						
-						wandb.log({"batch-size": batch_size})
+						wandb.log({
+          					"epoch": epoch, 
+                 			"iteration": iteration, 	
+                    		"batch-size": batch_size, 
+                      		"train_time": train_time, 
+                        	"valid_time": valid_time, 
+                         	"training_mnll": profile_loss_, 
+                 			"training_count_mse": count_loss_,
+                    		"valid_mnll": measures['profile_mnll'].mean().item(), 
+							"valid_profile_pearson": numpy.nan_to_num(profile_corr).mean(),
+							"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
+							"valid_count_mse": measures['count_mse'].mean().item(), 
+      						"saved": (valid_loss < best_loss).item()})
 
 
 						self.logger.save("{}.log".format(self.name))
