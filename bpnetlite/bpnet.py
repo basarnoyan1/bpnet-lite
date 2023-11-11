@@ -23,6 +23,8 @@ from .logging import Logger
 from tqdm import tqdm
 
 torch.backends.cudnn.benchmark = True
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+wandb.config.device = device
 
 class BPNet(torch.nn.Module):
 	"""A basic BPNet model with stranded profile and total count prediction.
@@ -257,8 +259,8 @@ class BPNet(torch.nn.Module):
 
 			y_profiles, y_counts = [], []
 			for start, end in tqdm(zip(starts, ends), disable=not verbose):
-				X_batch = X[start:end].cuda()
-				X_ctl_batch = None if X_ctl is None else X_ctl[start:end].cuda()
+				X_batch = X[start:end].to(device)
+				X_ctl_batch = None if X_ctl is None else X_ctl[start:end].to(device)
 
 				y_profiles_, y_counts_ = self(X_batch, X_ctl_batch)
 				y_profiles_ = y_profiles_.cpu()
@@ -337,11 +339,11 @@ class BPNet(torch.nn.Module):
 		wandb.config.max_epochs = max_epochs
 
 		if X_valid is not None:
-			X_valid = X_valid.cuda()
+			X_valid = X_valid.to(device)
 			y_valid_counts = y_valid.sum(dim=2)
 
 		if X_ctl_valid is not None:
-			X_ctl_valid = X_ctl_valid.cuda()
+			X_ctl_valid = X_ctl_valid.to(device)
 
 		iteration = 0
 		early_stop_count = 0
@@ -354,10 +356,10 @@ class BPNet(torch.nn.Module):
 			for data in training_data:
 				if len(data) == 3:
 					X, X_ctl, y = data
-					X, X_ctl, y = X.cuda(), X_ctl.cuda(), y.cuda()
+					X, X_ctl, y = X.to(device), X_ctl.to(device), y.to(device)
 				else:
 					X, y = data
-					X, y = X.cuda(), y.cuda()
+					X, y = X.to(device), y.to(device)
 					X_ctl = None
 
 				# Clear the optimizer and set the model to training mode

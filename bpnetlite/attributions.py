@@ -18,6 +18,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=NumbaDeprecationWarning)
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 class DeepLiftShap():
 	"""A vectorized version of the DeepLIFT/SHAP algorithm from Captum.
@@ -510,7 +511,7 @@ def ism(model, X_0, args=None, batch_size=128, verbose=False):
 	for i in range(n_seqs):
 		ism = []
 		for start in tqdm(starts, disable=not verbose):
-			X_ = X[i, start:start+batch_size].cuda()
+			X_ = X[i, start:start+batch_size].to(device)
 
 			if args is None:
 				y = model(X_)

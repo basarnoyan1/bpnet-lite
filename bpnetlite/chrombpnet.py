@@ -14,6 +14,7 @@ from .logging import Logger
 
 from tqdm import trange
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 class ChromBPNet(torch.nn.Module):
 	"""A ChromBPNet model.
@@ -127,7 +128,7 @@ class ChromBPNet(torch.nn.Module):
 
 		y_profile, y_counts = [], []
 		for start in trange(0, len(X), batch_size, disable=not verbose):
-			y_profile_, y_counts_ = self(X[start:start+batch_size].cuda())
+			y_profile_, y_counts_ = self(X[start:start+batch_size].to(device))
 			y_profile.append(y_profile_.cpu())
 			y_counts.append(y_counts_.cpu())
 
@@ -208,8 +209,8 @@ class ChromBPNet(torch.nn.Module):
 			for iteration, (X, y) in enumerate(training_data):
 				self.accessibility.train()
 
-				X = X.cuda()
-				y = y.cuda()
+				X = X.to(device)
+				y = y.to(device)
 
 				optimizer.zero_grad()
 

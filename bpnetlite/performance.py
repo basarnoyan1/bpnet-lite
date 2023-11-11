@@ -16,6 +16,7 @@ import torch
 from .losses import MNLLLoss
 from .losses import log1pMSELoss
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def smooth_gaussian1d(x, kernel_sigma, kernel_width):
     """Smooth a signal along the sequence length axis.

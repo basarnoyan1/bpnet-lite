@@ -14,6 +14,7 @@ import pyBigWig
 from tqdm import tqdm
 from numba import njit
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def read_meme(filename):
 	"""Read a MEME file and return a dictionary of PWMs.

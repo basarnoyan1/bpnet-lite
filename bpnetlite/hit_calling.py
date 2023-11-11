@@ -7,6 +7,8 @@ import torch
 
 from .io import read_meme
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
 class HitCaller(torch.nn.Module):
 	"""A motif hit caller that operates on sequences and attributions.
 

@@ -16,6 +16,7 @@ from .attributions import calculate_attributions
 
 import matplotlib.pyplot as plt
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def marginalize(model, motif, X):
 	"""Runs a single marginalization experiment.

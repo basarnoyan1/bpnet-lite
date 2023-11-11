@@ -7,6 +7,8 @@ This module contains the losses used by BPNet for training.
 
 import torch
 
+device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
 def MNLLLoss(logps, true_counts):
 	"""A loss function based on the multinomial negative log-likelihood.
 
