@@ -131,7 +131,7 @@ class BPNet(torch.nn.Module):
 		wandb.config.n_filters = n_filters
 		wandb.config.n_layers = n_layers
 		wandb.config.profile_output_bias = profile_output_bias
-		wandb.config.count.output_bias = count_output_bias
+		wandb.config.count_output_bias = count_output_bias
 		wandb.config.name = name
 		wandb.config.alpha = alpha
 		wandb.config.n_outputs = n_outputs
