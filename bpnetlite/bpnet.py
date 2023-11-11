@@ -12,6 +12,8 @@ import time
 import numpy
 import torch
 
+import wandb
+
 from .losses import MNLLLoss
 from .losses import log1pMSELoss
 from .performance import pearson_corr
@@ -21,6 +23,12 @@ from .logging import Logger
 from tqdm import tqdm
 
 torch.backends.cudnn.benchmark = True
+
+wandb.init(
+    project="bpnet-lite-test",
+    config={
+    }
+)
 
 
 class BPNet(torch.nn.Module):
@@ -405,6 +413,9 @@ class BPNet(torch.nn.Module):
 							numpy.nan_to_num(count_corr).mean(), 
 							measures['count_mse'].mean().item(),
 							(valid_loss < best_loss).item()])
+						
+						wandb.log({"batch-size": batch_size})
+
 
 						self.logger.save("{}.log".format(self.name))
 
