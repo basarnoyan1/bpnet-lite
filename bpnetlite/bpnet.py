@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 torch.backends.cudnn.benchmark = True
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-wandb.config.device = device
+
 
 class BPNet(torch.nn.Module):
 	"""A basic BPNet model with stranded profile and total count prediction.
@@ -129,7 +129,7 @@ class BPNet(torch.nn.Module):
 		self.n_outputs = n_outputs
 		self.n_control_tracks = n_control_tracks
   
-
+		wandb.config.device = device
 		wandb.config.n_filters = n_filters
 		wandb.config.n_layers = n_layers
 		wandb.config.profile_output_bias = profile_output_bias
