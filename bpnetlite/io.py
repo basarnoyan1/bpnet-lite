@@ -419,11 +419,11 @@ def extract_loci(loci, sequences, signals=None, controls=None, chroms=None,
 		seqs.append(seq)
 		loci_count += 1
 
-	seqs = torch.tensor(numpy.array(seqs), dtype=torch.float32, )
+	seqs = torch.tensor(numpy.array(seqs), dtype=torch.float32, ).to(device)
 
 	if signals is not None:
-		signals_ = torch.tensor(numpy.array(signals_), dtype=torch.float32)
-
+		signals_ = torch.tensor(numpy.array(signals_), dtype=torch.float32).to(device)
+  
 		idxs = torch.ones(signals_.shape[0], dtype=torch.bool)
 		if max_counts is not None:
 			idxs = (idxs) & (signals_.sum(dim=(1, 2)) < max_counts)
@@ -431,14 +431,13 @@ def extract_loci(loci, sequences, signals=None, controls=None, chroms=None,
 			idxs = (idxs) & (signals_.sum(dim=(1, 2)) > min_counts)
 
 		if controls is not None:
-			controls_ = torch.tensor(numpy.array(controls_), dtype=torch.float32)
+			controls_ = torch.tensor(numpy.array(controls_), dtype=torch.float32).to(device)
 			return seqs[idxs], signals_[idxs], controls_[idxs]
 
 		return seqs[idxs], signals_[idxs]
 	else:
 		if controls is not None:
-			controls_ = torch.tensor(numpy.array(controls_), dtype=torch.float32)
-			return seqs, controls_
+			controls_ = torch.tensor(numpy.array(controls_), dtype=torch.float32).to(device)
 
 		return seqs			
 

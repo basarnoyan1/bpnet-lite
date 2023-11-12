@@ -281,7 +281,6 @@ class BPNet(L.LightningModule):
 	def training_step(self, batch, batch_idx):
 		X, y, X_ctl = batch[0], batch[-1], batch[1] if len(batch) == 3 else None
   
-  
 		if self.X_valid is not None:
 			self.X_valid = self.X_valid.to(device)
 			y_valid_counts = self.y_valid.sum(dim=2)
@@ -301,13 +300,9 @@ class BPNet(L.LightningModule):
   
 		loss = profile_loss + self.alpha * count_loss
 		loss.backward()
-		#optimizer.step()
-		#loss = self.compute_loss(y_profile, y) #Check
-		#self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
   
 		self.eval()
 
-		
 		y_profile, y_counts = self.predict(self.X_valid, self.X_ctl_valid)
 
 		z = y_profile.shape
@@ -338,23 +333,7 @@ class BPNet(L.LightningModule):
 		 	"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
 		 	"valid_count_mse": measures['count_mse'].mean().item()
     })
-
-
-		# if valid_loss < best_loss:
-		# 	torch.save(self, "{}.torch".format(self.name))
-		# 	best_loss = valid_loss
-		# 	early_stop_count = 0
-		# else:
-		# 	early_stop_count += 1
-  
 		return loss
-
-
-	#def compute_loss(self, y_pred, y):
-
-		# profile_loss = MNLLLoss(y_pred, y)
-		# count_loss = log1pMSELoss(y_pred, y)
-		# return (profile_loss + self.alpha * count_loss).mean()
 
 
 	def configure_optimizers(self):
