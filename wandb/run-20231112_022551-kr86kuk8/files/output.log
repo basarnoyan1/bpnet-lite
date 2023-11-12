@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/basar/Documents/Lack Lab Research/BPNet_Training_Kit/train_bpnetlite_on_mac.py", line 16, in <module>
+    data = json.load(open("bpnet_fit_param.json"))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'bpnet_fit_param.json'

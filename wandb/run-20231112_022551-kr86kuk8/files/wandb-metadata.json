@@ -1,0 +1,36 @@
+{
+    "os": "macOS-14.1-arm64-arm-64bit",
+    "python": "3.11.5",
+    "heartbeatAt": "2023-11-11T23:25:52.804052",
+    "startedAt": "2023-11-11T23:25:51.801848",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/basar/Documents/Lack Lab Research/BPNet_Training_Kit/train_bpnetlite_on_mac.py",
+    "codePathLocal": null,
+    "git": {
+        "remote": "https://github.com/basarnoyan1/bpnet-lite.git",
+        "commit": "2feb5f8599932801c41cda1c6dbad2e6337e99a7"
+    },
+    "email": "basarnoyan1@gmail.com",
+    "root": "/Users/basar/Documents/Lack Lab Research/bpnet-lite",
+    "host": "Basars-MacBook-Air.local",
+    "username": "basar",
+    "executable": "/Users/basar/miniconda3/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "disk": {
+        "/": {
+            "total": 228.27386474609375,
+            "used": 195.28766250610352
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 8.0
+    }
+}

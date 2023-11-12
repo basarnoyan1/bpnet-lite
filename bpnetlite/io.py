@@ -416,7 +416,7 @@ def extract_loci(loci, sequences, signals=None, controls=None, chroms=None,
 		seqs.append(seq)
 		loci_count += 1
 
-	seqs = torch.tensor(numpy.array(seqs), dtype=torch.float32)
+	seqs = torch.tensor(numpy.array(seqs), dtype=torch.float32, )
 
 	if signals is not None:
 		signals_ = torch.tensor(numpy.array(signals_), dtype=torch.float32)
@@ -527,8 +527,6 @@ def PeakGenerator(loci, sequences, signals, controls=None, chroms=None,
 		A PyTorch DataLoader wrapped DataGenerator object.
 	"""
  
-	
-
 	X = extract_loci(loci=loci, sequences=sequences, signals=signals, 
 		controls=controls, chroms=chroms, in_window=in_window, 
 		out_window=out_window, max_jitter=max_jitter, min_counts=min_counts,

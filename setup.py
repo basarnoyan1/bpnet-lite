@@ -1,15 +1,15 @@
 from setuptools import setup
 
 setup(
-    name='bpnet-lite',
-    version='0.5.6',
-    author='Jacob Schreiber',
-    author_email='jmschreiber91@gmail.com',
+    name='bpnet-lite-lightning',
+    version='0.1.0',
+    author='Basar Noyan',
+    author_email='basarnoyan1@gmail.com',
     packages=['bpnetlite'],
     scripts=['bpnet', 'chrombpnet'],
     url='https://github.com/jmschrei/bpnet-lite',
     license='LICENSE.txt',
-    description='bpnet-lite is a minimal implementation of BPNet, a neural network aimed at interpreting regulatory activity of the genome.',
+    description='bpnet-lite-lightning involves small changes to original bpnet-lite package.',
     install_requires=[
         "numpy >= 1.14.2",
         "scipy >= 1.0.0",
@@ -21,9 +21,10 @@ setup(
         "tqdm >= 4.64.1",
         "numba >= 0.55.1",
         "logomaker",
-        "captum == 0.5.0",
+        "captum",
         "seaborn >= 0.11.2",
-        "modisco-lite >= 2.0.0",
-        "wandb"
+        #"modisco-lite >= 2.0.0",
+        "wandb",
+        "lightning"
     ],
 )

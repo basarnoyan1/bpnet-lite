@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: bpnet-lite-lightning
+Version: 0.1.0
+Summary: bpnet-lite-lightning involves small changes to original bpnet-lite package.
+Home-page: https://github.com/jmschrei/bpnet-lite
+Author: Basar Noyan
+Author-email: basarnoyan1@gmail.com
+License: LICENSE.txt
+License-File: LICENSE

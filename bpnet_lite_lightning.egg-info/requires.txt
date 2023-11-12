@@ -11,3 +11,4 @@ logomaker
 captum
 seaborn>=0.11.2
 wandb
+lightning
