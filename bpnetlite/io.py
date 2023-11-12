@@ -6,6 +6,9 @@ import numpy
 import torch
 import pandas
 
+import lightning as L
+
+
 import wandb
 
 import pyfaidx
@@ -122,7 +125,7 @@ def one_hot_encode(sequence, alphabet=['A', 'C', 'G', 'T'], dtype='int8',
 	return ohe.T
 
 
-class DataGenerator(torch.utils.data.Dataset):
+class DataGenerator(L.LightningDataModule):
 	"""A data generator for BPNet inputs.
 
 	This generator takes in an extracted set of sequences, output signals,

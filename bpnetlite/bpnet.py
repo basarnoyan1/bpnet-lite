@@ -280,8 +280,14 @@ class BPNet(L.LightningModule):
 
 	def training_step(self, batch, batch_idx):
 		X, y, X_ctl = batch[0], batch[-1], batch[1] if len(batch) == 3 else None
+  
+  
 		if self.X_valid is not None:
+			self.X_valid = self.X_valid.to(device)
 			y_valid_counts = self.y_valid.sum(dim=2)
+
+		if self.X_ctl_valid is not None:
+			self.X_ctl_valid = self.X_ctl_valid.to(device)
 
 		y_profile, y_counts = self(X, X_ctl)
 		y_profile = y_profile.reshape(y_profile.shape[0], -1)
