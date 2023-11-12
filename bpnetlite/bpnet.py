@@ -124,7 +124,9 @@ class BPNet(L.LightningModule):
 
 	def __init__(self, n_filters=64, n_layers=8, n_outputs=2, 
 		n_control_tracks=2, alpha=1, profile_output_bias=True, 
-		count_output_bias=True, name=None, trimming=None, verbose=True, lr=0.001, batch_size=64, train_params=None, val_params=None):
+		count_output_bias=True, name=None, trimming=None, verbose=True, 
+  		lr=0.001, batch_size=64, train_params=None, val_params=None,
+    	X_valid=None, X_ctl_valid=None, y_valid=None):
 		super(BPNet, self).__init__()
   
 		wandb.config.device = device
@@ -142,6 +144,10 @@ class BPNet(L.LightningModule):
   
 		self.train_params = train_params
 		self.val_params = val_params 
+  
+		self.X_valid = X_valid
+		self.X_ctl_valid = X_ctl_valid
+		self.y_valid = y_valid
 
 		wandb.config.n_filters = n_filters
 		wandb.config.n_layers = n_layers
@@ -222,7 +228,6 @@ class BPNet(L.LightningModule):
 		y_counts = self.linear(X).reshape(X.shape[0], 1)
 		return y_profile, y_counts
 
-
 	def predict(self, X, X_ctl=None, batch_size=64, verbose=False):
 		"""Make predictions for a large number of examples.
 
@@ -264,8 +269,6 @@ class BPNet(L.LightningModule):
 			X_ctl_batch = None if X_ctl is None else X_ctl[start:end]
 
 			y_profiles_, y_counts_ = self(X_batch, X_ctl_batch)
-			y_profiles_ = y_profiles_.cpu()
-			y_counts_ = y_counts_.cpu()
 			
 			y_profiles.append(y_profiles_)
 			y_counts.append(y_counts_)
@@ -276,34 +279,30 @@ class BPNet(L.LightningModule):
 
 
 	def training_step(self, batch, batch_idx):
-
-		X = batch[0]
-		y = batch[-1]
-		X_ctl = batch[1] if len(batch) == 3 else None
-  
+		X, y, X_ctl = batch[0], batch[-1], batch[1] if len(batch) == 3 else None
+		if self.X_valid is not None:
+			y_valid_counts = self.y_valid.sum(dim=2)
 
 		y_profile, y_counts = self(X, X_ctl)
 		y_profile = y_profile.reshape(y_profile.shape[0], -1)
 		y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 		y = y.reshape(y.shape[0], -1)
   
-
-		loss = self.compute_loss(y_profile, y) #Check
+		profile_loss = MNLLLoss(y_profile, y).mean()
+		count_loss = log1pMSELoss(y_counts, y.sum(dim=-1).reshape(-1, 1)).mean()
+		profile_loss_ = profile_loss.item()
+		count_loss_ = count_loss.item()
+  
+		loss = profile_loss + self.alpha * count_loss
+		loss.backward()
+		#optimizer.step()
+		#loss = self.compute_loss(y_profile, y) #Check
 		#self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-		return loss
-
-	def validate(self, batch, batch_idx, dataloader_idx=0):
-		
-		X_valid= batch[0]
-		y_valid = batch[1]
-		X_ctl_valid = batch[2] if len(batch) == 3 else None
-     
-		#train_time = time.time() - tic
-
+  
 		self.eval()
 
-		tic = time.time()
-		y_profile, y_counts = self.predict(X_valid, X_ctl_valid)
+		
+		y_profile, y_counts = self.predict(self.X_valid, self.X_ctl_valid)
 
 		z = y_profile.shape
 		y_profile = y_profile.reshape(y_profile.shape[0], -1)
@@ -311,7 +310,7 @@ class BPNet(L.LightningModule):
 		y_profile = y_profile.reshape(*z)
 
 		measures = calculate_performance_measures(y_profile, 
-			y_valid, y_counts, kernel_sigma=7, 
+			self.y_valid, y_counts, kernel_sigma=7, 
 			kernel_width=81, measures=['profile_mnll', 
 			'profile_pearson', 'count_pearson', 'count_mse'])
 
@@ -320,61 +319,36 @@ class BPNet(L.LightningModule):
 		
 		valid_loss = measures['profile_mnll'].mean()
 		valid_loss += self.alpha * measures['count_mse'].mean()
-		valid_time = time.time() - tic
-
-		# self.logger.add([epoch, iteration, train_time, 
-		# 	valid_time, profile_loss_, count_loss_, 
-		# 	measures['profile_mnll'].mean().item(), 
-		# 	numpy.nan_to_num(profile_corr).mean(),
-		# 	numpy.nan_to_num(count_corr).mean(), 
-		# 	measures['count_mse'].mean().item(),
-		# 	(valid_loss < best_loss).item()])
-		
-		# wandb.log({
-		# 	"epoch": epoch, 
-		# 	"iteration": iteration, 	
-		# 	"train_time": train_time, 
-		# 	"valid_time": valid_time, 
-		# 	"training_mnll": profile_loss_, 
-		# 	"training_count_mse": count_loss_,
-		# 	"valid_mnll": measures['profile_mnll'].mean().item(), 
-		# 	"valid_profile_pearson": numpy.nan_to_num(profile_corr).mean(),
-		# 	"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
-		# 	"valid_count_mse": measures['count_mse'].mean().item(), 
-		# 	"saved": (valid_loss < best_loss).item()})
-
-		#self.logger.save("{}.log".format(self.name))
-
-		if valid_loss < best_loss:
-			torch.save(self, "{}.torch".format(self.name))
-			best_loss = valid_loss
-			early_stop_count = 0
-		else:
-			early_stop_count += 1
-     
-     
-     
-     
-		#X, y = batch
-		#y_pred = self(X)
-		#val_loss = self.compute_loss(y_pred, y)
-		#self.log('val_loss', val_loss, on_epoch=True, prog_bar=True, logger=True)
-		#return {"val_loss": val_loss}
+  
+		wandb.log({
+		 	"epoch": self.current_epoch + 1, 
+		 	"iteration": self.global_step, 	
+		 	#"train_time": train_time, 
+		 	#"valid_time": valid_time, 
+		 	"training_mnll": profile_loss_, 
+		 	"training_count_mse": count_loss_,
+		 	"valid_mnll": measures['profile_mnll'].mean().item(), 
+		 	"valid_profile_pearson": numpy.nan_to_num(profile_corr).mean(),
+		 	"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
+		 	"valid_count_mse": measures['count_mse'].mean().item()
+    })
 
 
+		# if valid_loss < best_loss:
+		# 	torch.save(self, "{}.torch".format(self.name))
+		# 	best_loss = valid_loss
+		# 	early_stop_count = 0
+		# else:
+		# 	early_stop_count += 1
+  
+		return loss
 
 
+	#def compute_loss(self, y_pred, y):
 
-
-	def compute_loss(self, y_pred, y):
-
-		profile_loss = MNLLLoss(y_pred, y)
-		count_loss = log1pMSELoss(y_pred, y)
-		return (profile_loss + self.alpha * count_loss).mean()
-
-
-
-
+		# profile_loss = MNLLLoss(y_pred, y)
+		# count_loss = log1pMSELoss(y_pred, y)
+		# return (profile_loss + self.alpha * count_loss).mean()
 
 
 	def configure_optimizers(self):
@@ -383,90 +357,90 @@ class BPNet(L.LightningModule):
 	def train_dataloader(self):
 		return PeakGenerator(**self.train_params)
 
-	def val_dataloader(self):
-		val_data = extract_loci(**self.val_params)
-		return val_data
+	# def val_dataloader(self):
+	# 	val_data = extract_loci(**self.val_params)
+	# 	return val_data
 
 
 
-	@classmethod
-	def from_chrombpnet_lite(cls, filename):
-		"""Loads a model from ChromBPNet-lite TensorFlow format.
+	# @classmethod
+	# def from_chrombpnet_lite(cls, filename):
+	# 	"""Loads a model from ChromBPNet-lite TensorFlow format.
 	
-		This method will load a ChromBPNet-lite model from TensorFlow format.
-		Note that this is not the same as ChromBPNet format. Specifically,
-		ChromBPNet-lite was a preceeding package that had a slightly different
-		saving format, whereas ChromBPNet is the packaged version of that
-		code that is applied at scale.
+	# 	This method will load a ChromBPNet-lite model from TensorFlow format.
+	# 	Note that this is not the same as ChromBPNet format. Specifically,
+	# 	ChromBPNet-lite was a preceeding package that had a slightly different
+	# 	saving format, whereas ChromBPNet is the packaged version of that
+	# 	code that is applied at scale.
 
-		This method does not load the entire ChromBPNet model. If that is
-		the desired behavior, see the `ChromBPNet` object and its associated
-		loading functions. Instead, this loads a single BPNet model -- either
-		the bias model or the accessibility model, depending on what is encoded
-		in the stored file.
-
-
-		Parameters
-		----------
-		filename: str
-			The name of the h5 file that stores the trained model parameters.
+	# 	This method does not load the entire ChromBPNet model. If that is
+	# 	the desired behavior, see the `ChromBPNet` object and its associated
+	# 	loading functions. Instead, this loads a single BPNet model -- either
+	# 	the bias model or the accessibility model, depending on what is encoded
+	# 	in the stored file.
 
 
-		Returns
-		-------
-		model: BPNet
-			A BPNet model compatible with this repository in PyTorch.
-		"""
+	# 	Parameters
+	# 	----------
+	# 	filename: str
+	# 		The name of the h5 file that stores the trained model parameters.
 
-		h5 = h5py.File(filename, "r")
-		w = h5['model_weights']
 
-		if 'model_1' in w.keys():
-			w = w['model_1']
-			bias = False
-		else:
-			bias = True
+	# 	Returns
+	# 	-------
+	# 	model: BPNet
+	# 		A BPNet model compatible with this repository in PyTorch.
+	# 	"""
 
-		k, b = 'kernel:0', 'bias:0'
-		name = "conv1d_{}_1" if not bias else "conv1d_{0}/conv1d_{0}"
+	# 	h5 = h5py.File(filename, "r")
+	# 	w = h5['model_weights']
 
-		layer_names = []
-		for layer_name in w.keys():
-			try:
-				idx = int(layer_name.split("_")[1])
-				layer_names.append(idx)
-			except:
-				pass
+	# 	if 'model_1' in w.keys():
+	# 		w = w['model_1']
+	# 		bias = False
+	# 	else:
+	# 		bias = True
 
-		n_filters = w[name.format(1)][k].shape[2]
-		n_layers = max(layer_names) - 2
+	# 	k, b = 'kernel:0', 'bias:0'
+	# 	name = "conv1d_{}_1" if not bias else "conv1d_{0}/conv1d_{0}"
 
-		model = BPNet(n_layers=n_layers, n_filters=n_filters, n_outputs=1,
-			n_control_tracks=0, trimming=(2114-1000)//2)
+	# 	layer_names = []
+	# 	for layer_name in w.keys():
+	# 		try:
+	# 			idx = int(layer_name.split("_")[1])
+	# 			layer_names.append(idx)
+	# 		except:
+	# 			pass
 
-		convert_w = lambda x: torch.nn.Parameter(torch.tensor(
-			x[:]).permute(2, 1, 0))
-		convert_b = lambda x: torch.nn.Parameter(torch.tensor(x[:]))
+	# 	n_filters = w[name.format(1)][k].shape[2]
+	# 	n_layers = max(layer_names) - 2
 
-		model.iconv.weight = convert_w(w[name.format(1)][k])
-		model.iconv.bias = convert_b(w[name.format(1)][b])
-		model.iconv.padding = 12
+	# 	model = BPNet(n_layers=n_layers, n_filters=n_filters, n_outputs=1,
+	# 		n_control_tracks=0, trimming=(2114-1000)//2)
 
-		for i in range(2, n_layers+2):
-			model.rconvs[i-2].weight = convert_w(w[name.format(i)][k])
-			model.rconvs[i-2].bias = convert_b(w[name.format(i)][b])
+	# 	convert_w = lambda x: torch.nn.Parameter(torch.tensor(
+	# 		x[:]).permute(2, 1, 0))
+	# 	convert_b = lambda x: torch.nn.Parameter(torch.tensor(x[:]))
 
-		model.fconv.weight = convert_w(w[name.format(n_layers+2)][k])
-		model.fconv.bias = convert_b(w[name.format(n_layers+2)][b])
-		model.fconv.padding = 12
+	# 	model.iconv.weight = convert_w(w[name.format(1)][k])
+	# 	model.iconv.bias = convert_b(w[name.format(1)][b])
+	# 	model.iconv.padding = 12
 
-		name = "logcounts_1" if not bias else "logcounts/logcounts"
-		model.linear.weight = torch.nn.Parameter(torch.tensor(w[name][k][:].T))
-		model.linear.bias = convert_b(w[name][b])
-		return model
+	# 	for i in range(2, n_layers+2):
+	# 		model.rconvs[i-2].weight = convert_w(w[name.format(i)][k])
+	# 		model.rconvs[i-2].bias = convert_b(w[name.format(i)][b])
 
-	@classmethod
-	def from_chrombpnet(cls, filename):
+	# 	model.fconv.weight = convert_w(w[name.format(n_layers+2)][k])
+	# 	model.fconv.bias = convert_b(w[name.format(n_layers+2)][b])
+	# 	model.fconv.padding = 12
+
+	# 	name = "logcounts_1" if not bias else "logcounts/logcounts"
+	# 	model.linear.weight = torch.nn.Parameter(torch.tensor(w[name][k][:].T))
+	# 	model.linear.bias = convert_b(w[name][b])
+	# 	return model
+
+	# @classmethod
+	# def from_chrombpnet(cls, filename):
 		"""Loads a model from ChromBPNet TensorFlow format.
 	
 		This method will load one of the components of a ChromBPNet model
