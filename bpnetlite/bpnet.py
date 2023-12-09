@@ -7,8 +7,7 @@ or adapted for your own circumstances. The implementation takes in a
 stranded control track and makes predictions for stranded outputs.
 """
 
-import h5py
-import time 
+from typing import Any
 import numpy
 import torch
 import lightning as L
@@ -17,9 +16,7 @@ import lightning as L
 import wandb
 
 from .losses import MNLLLoss, log1pMSELoss
-from .performance import pearson_corr, calculate_performance_measures
-
-from torch.utils.data import DataLoader
+from .performance import pearson_corr, calculate_performance_measures, profile_pred
 
 from .io import PeakGenerator, extract_loci
 
@@ -148,6 +145,9 @@ class BPNet(L.LightningModule):
 		self.X_valid = X_valid
 		self.X_ctl_valid = X_ctl_valid
 		self.y_valid = y_valid
+  
+		self.saved_logps = None
+		self.saved_true_counts = None
 
 		wandb.config.n_filters = n_filters
 		wandb.config.n_layers = n_layers
@@ -309,6 +309,9 @@ class BPNet(L.LightningModule):
 		y_profile = y_profile.reshape(y_profile.shape[0], -1)
 		y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 		y_profile = y_profile.reshape(*z)
+  
+		self.saved_logps = y_profile
+		self.saved_true_counts = self.y_valid
 
 		measures = calculate_performance_measures(y_profile, 
 			self.y_valid, y_counts, kernel_sigma=7, 
@@ -333,169 +336,20 @@ class BPNet(L.LightningModule):
 		 	"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
 		 	"valid_count_mse": measures['count_mse'].mean().item()
     })
+		wandb.log(
+			
+   #Binary classification
+   
+		)
 		return loss
 
+	def predict_step(self, batch):
+		profile_prediction = profile_pred(self.saved_logps, self.saved_true_counts)
+		print(profile_prediction)
+		return self(batch)
 
 	def configure_optimizers(self):
 		return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
 	def train_dataloader(self):
 		return PeakGenerator(**self.train_params)
-
-	# def val_dataloader(self):
-	# 	val_data = extract_loci(**self.val_params)
-	# 	return val_data
-
-
-
-	# @classmethod
-	# def from_chrombpnet_lite(cls, filename):
-	# 	"""Loads a model from ChromBPNet-lite TensorFlow format.
-	
-	# 	This method will load a ChromBPNet-lite model from TensorFlow format.
-	# 	Note that this is not the same as ChromBPNet format. Specifically,
-	# 	ChromBPNet-lite was a preceeding package that had a slightly different
-	# 	saving format, whereas ChromBPNet is the packaged version of that
-	# 	code that is applied at scale.
-
-	# 	This method does not load the entire ChromBPNet model. If that is
-	# 	the desired behavior, see the `ChromBPNet` object and its associated
-	# 	loading functions. Instead, this loads a single BPNet model -- either
-	# 	the bias model or the accessibility model, depending on what is encoded
-	# 	in the stored file.
-
-
-	# 	Parameters
-	# 	----------
-	# 	filename: str
-	# 		The name of the h5 file that stores the trained model parameters.
-
-
-	# 	Returns
-	# 	-------
-	# 	model: BPNet
-	# 		A BPNet model compatible with this repository in PyTorch.
-	# 	"""
-
-	# 	h5 = h5py.File(filename, "r")
-	# 	w = h5['model_weights']
-
-	# 	if 'model_1' in w.keys():
-	# 		w = w['model_1']
-	# 		bias = False
-	# 	else:
-	# 		bias = True
-
-	# 	k, b = 'kernel:0', 'bias:0'
-	# 	name = "conv1d_{}_1" if not bias else "conv1d_{0}/conv1d_{0}"
-
-	# 	layer_names = []
-	# 	for layer_name in w.keys():
-	# 		try:
-	# 			idx = int(layer_name.split("_")[1])
-	# 			layer_names.append(idx)
-	# 		except:
-	# 			pass
-
-	# 	n_filters = w[name.format(1)][k].shape[2]
-	# 	n_layers = max(layer_names) - 2
-
-	# 	model = BPNet(n_layers=n_layers, n_filters=n_filters, n_outputs=1,
-	# 		n_control_tracks=0, trimming=(2114-1000)//2)
-
-	# 	convert_w = lambda x: torch.nn.Parameter(torch.tensor(
-	# 		x[:]).permute(2, 1, 0))
-	# 	convert_b = lambda x: torch.nn.Parameter(torch.tensor(x[:]))
-
-	# 	model.iconv.weight = convert_w(w[name.format(1)][k])
-	# 	model.iconv.bias = convert_b(w[name.format(1)][b])
-	# 	model.iconv.padding = 12
-
-	# 	for i in range(2, n_layers+2):
-	# 		model.rconvs[i-2].weight = convert_w(w[name.format(i)][k])
-	# 		model.rconvs[i-2].bias = convert_b(w[name.format(i)][b])
-
-	# 	model.fconv.weight = convert_w(w[name.format(n_layers+2)][k])
-	# 	model.fconv.bias = convert_b(w[name.format(n_layers+2)][b])
-	# 	model.fconv.padding = 12
-
-	# 	name = "logcounts_1" if not bias else "logcounts/logcounts"
-	# 	model.linear.weight = torch.nn.Parameter(torch.tensor(w[name][k][:].T))
-	# 	model.linear.bias = convert_b(w[name][b])
-	# 	return model
-
-	# @classmethod
-	# def from_chrombpnet(cls, filename):
-		"""Loads a model from ChromBPNet TensorFlow format.
-	
-		This method will load one of the components of a ChromBPNet model
-		from TensorFlow format. Note that a full ChromBPNet model is made up
-		of an accessibility model and a bias model and that this will load
-		one of the two. Use `ChromBPNet.from_chrombpnet` to end up with the
-		entire ChromBPNet model.
-
-
-		Parameters
-		----------
-		filename: str
-			The name of the h5 file that stores the trained model parameters.
-
-
-		Returns
-		-------
-		model: BPNet
-			A BPNet model compatible with this repository in PyTorch.
-		"""
-
-		h5 = h5py.File(filename, "r")
-		w = h5['model_weights']
-
-		if 'bpnet_1conv' in w.keys():
-			prefix = ""
-		else:
-			prefix = "wo_bias_"
-
-		namer = lambda prefix, suffix: '{0}{1}/{0}{1}'.format(prefix, suffix)
-		k, b = 'kernel:0', 'bias:0'
-
-		n_layers = 0
-		for layer_name in w.keys():
-			try:
-				idx = int(layer_name.split("_")[-1].replace("conv", ""))
-				n_layers = max(n_layers, idx)
-			except:
-				pass
-
-		name = namer(prefix, "bpnet_1conv")
-		n_filters = w[name][k].shape[2]
-
-		model = BPNet(n_layers=n_layers, n_filters=n_filters, n_outputs=1,
-			n_control_tracks=0, trimming=(2114-1000)//2)
-
-		convert_w = lambda x: torch.nn.Parameter(torch.tensor(
-			x[:]).permute(2, 1, 0))
-		convert_b = lambda x: torch.nn.Parameter(torch.tensor(x[:]))
-
-		iname = namer(prefix, 'bpnet_1st_conv')
-
-		model.iconv.weight = convert_w(w[iname][k])
-		model.iconv.bias = convert_b(w[iname][b])
-		model.iconv.padding = (21 - 1) // 2
-
-		for i in range(1, n_layers+1):
-			lname = namer(prefix, 'bpnet_{}conv'.format(i))
-
-			model.rconvs[i-1].weight = convert_w(w[lname][k])
-			model.rconvs[i-1].bias = convert_b(w[lname][b])
-
-		prefix = prefix + "bpnet_" if prefix != "" else ""
-
-		fname = namer(prefix, 'prof_out_precrop')
-		model.fconv.weight = convert_w(w[fname][k])
-		model.fconv.bias = convert_b(w[fname][b])
-		model.fconv.padding = (75 - 1) // 2
-
-		name = namer(prefix, "logcount_predictions")
-		model.linear.weight = torch.nn.Parameter(torch.tensor(w[name][k][:].T))
-		model.linear.bias = convert_b(w[name][b])
-		return model

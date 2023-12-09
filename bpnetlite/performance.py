@@ -12,9 +12,12 @@ AND THE SECOND ARGUMENT MUST BE IN COUNT SPACE FOR THESE FUNCTIONS.
 """
 
 import torch
+import pandas as pd
+import numpy as np
 
 from .losses import MNLLLoss
 from .losses import log1pMSELoss
+from sklearn.metrics import average_precision_score
 
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -351,3 +354,144 @@ def calculate_performance_measures(logps, true_counts, pred_log_counts,
             true_log_counts.T)
 
     return measures_
+
+
+
+
+
+
+
+
+
+###########
+
+def profile_pred(logps, true_counts):
+    """
+    The alternative performance evaluation method used in BPNet paper.
+
+    Parameters
+    ----------
+    logps: torch.tensor
+        A tensor of the predicted log probability values.
+
+    true_counts: torch.tensor
+        A tensor of the true values, usually integer counts.
+    """
+    
+    pos_min_threshold = 0.05
+    neg_max_threshold = 0.01
+    required_min_pos_counts = 2.5
+    binsizes = [1, 2, 4, 10]
+
+    # Convert log probabilities to probabilities
+    yp = torch.exp(logps)
+    do_eval = true_counts.sum(axis=1).mean(axis=1) > required_min_pos_counts / pos_min_threshold
+
+    # Normalize probabilities and fractions
+    yp = yp / yp.sum(dim=1, keepdim=True)
+    fracs = true_counts / true_counts.sum(axis=1, keepdims=True)
+
+    # Random permutation for baseline comparison
+    yp_random = permute_array(permute_array(yp[do_eval], axis=1), axis=0)
+
+    results = []
+    for binsize in binsizes:
+        # Classify as peak, ambiguous, or non-peak
+        is_peak = (fracs >= pos_min_threshold).float()
+        ambiguous = (fracs < pos_min_threshold) & (fracs >= neg_max_threshold)
+        is_peak[ambiguous] = -1
+
+        # Flatten for AUPRC calculation
+        y_true = torch.ravel(bin_counts_amb(is_peak[do_eval], binsize))
+
+        # Calculate metrics
+        imbalance = torch.sum(y_true == 1) / torch.sum(y_true >= 0)
+        n_positives = torch.sum(y_true == 1)
+        n_ambiguous = torch.sum(y_true == -1)
+        frac_ambiguous = n_ambiguous / y_true.numel()
+
+        try:
+            res = auprc(y_true, torch.ravel(bin_counts_max(yp[do_eval], binsize)))
+            res_random = auprc(y_true, torch.ravel(bin_counts_max(yp_random, binsize)))
+        except Exception as e:
+            res = torch.tensor(float('nan'))
+            res_random = torch.tensor(float('nan'))
+
+        results.append({
+            "binsize": binsize,
+            "auprc": res,
+            "random_auprc": res_random,
+            "n_positives": n_positives,
+            "frac_ambiguous": frac_ambiguous,
+            "imbalance": imbalance
+        })
+
+    return pd.DataFrame(results)
+
+def permute_array(arr, axis=0):
+    #Randomly permutes a tensor along a specified axis.
+    idx = torch.randperm(arr.size(axis))
+    return arr.index_select(axis, idx)
+
+def bin_counts_amb(y, binsize=2):
+    #Bin the counts with handling for ambiguous cases.
+    if binsize == 1:
+        return y
+    assert len(y.shape) == 3
+    outlen = y.shape[1] // binsize
+    xout = torch.zeros((y.shape[0], outlen, y.shape[2]), dtype=torch.float32)
+    for i in range(outlen):
+        iterval = y[:, (binsize * i):(binsize * (i + 1)), :]
+        has_amb = (iterval == -1).any(dim=1)
+        has_peak = (iterval == 1).any(dim=1)
+        xout[:, i, :] = (has_peak - (1 - has_peak) * has_amb).float()
+    return xout
+
+
+def bin_counts_max(y, binsize=2):
+    #Bin the counts by taking the maximum value in each bin.
+    if binsize == 1:
+        return y
+    assert len(y.shape) == 3
+    outlen = y.shape[1] // binsize
+    xout = torch.zeros((y.shape[0], outlen, y.shape[2]), dtype=torch.float32)
+    for i in range(outlen):
+        xout[:, i, :] = torch.max(y[:, (binsize * i):(binsize * (i + 1)), :], dim=1)[0]
+    return xout
+
+def auprc(y_true, y_pred):
+    # Compute the area under the precision-recall curve.
+    y_true_np = y_true.cpu().detach().numpy()
+    y_pred_np = y_pred.cpu().detach().numpy()
+    return average_precision_score(y_true_np, y_pred_np)
+
+
+
+"""MASK_VALUE = -1
+# Binary classification
+
+
+def _mask_nan(y_true, y_pred):
+    mask_array = ~np.isnan(y_true)
+    if np.any(np.isnan(y_pred)):
+        print("WARNING: y_pred contains {0}/{1} np.nan values. removing them...".
+              format(np.sum(np.isnan(y_pred)), y_pred.size))
+        mask_array = np.logical_and(mask_array, ~np.isnan(y_pred))
+    return y_true[mask_array], y_pred[mask_array]
+
+
+def _mask_value(y_true, y_pred, mask=MASK_VALUE):
+    mask_array = y_true != mask
+    return y_true[mask_array], y_pred[mask_array]
+
+
+def _mask_value_nan(y_true, y_pred, mask=MASK_VALUE):
+    y_true, y_pred = _mask_nan(y_true, y_pred)
+    return _mask_value(y_true, y_pred, mask)"""
+
+###########
+
+
+
+
+
