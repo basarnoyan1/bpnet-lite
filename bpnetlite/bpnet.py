@@ -336,11 +336,7 @@ class BPNet(L.LightningModule):
 		 	"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
 		 	"valid_count_mse": measures['count_mse'].mean().item()
     })
-		wandb.log(
-			
-   #Binary classification
-   
-		)
+#wandblog
 		return loss
 
 	def predict_step(self, batch):
