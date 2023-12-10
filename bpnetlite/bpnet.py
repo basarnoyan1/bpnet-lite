@@ -403,7 +403,7 @@ class BPNet(torch.nn.Module):
 						y_profile = y_profile.reshape(*z)
       
 						self.last_logps = y_profile
-						self.last_true_count = y_valid
+						self.last_true_count = y_counts
 
 						measures = calculate_performance_measures(y_profile, 
 							y_valid, y_counts, kernel_sigma=7, 
