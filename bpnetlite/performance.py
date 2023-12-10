@@ -389,20 +389,20 @@ def profile_pred(logps, true_counts):
         is_peak[ambiguous] = -1
 
         # Flatten for AUPRC calculation
-        y_true = torch.ravel(bin_counts_amb(is_peak[do_eval], binsize))
+        y_true = np.ravel(bin_counts_amb(is_peak[do_eval], binsize))
 
         # Calculate metrics
-        imbalance = torch.sum(y_true == 1) / torch.sum(y_true >= 0)
-        n_positives = torch.sum(y_true == 1)
-        n_ambiguous = torch.sum(y_true == -1)
-        frac_ambiguous = n_ambiguous / y_true.numel()
+        imbalance = np.sum(y_true == 1) / np.sum(y_true >= 0)
+        n_positives = np.sum(y_true == 1)
+        n_ambiguous = np.sum(y_true == -1)
+        frac_ambiguous = n_ambiguous / y_true.size
 
         try:
-            res = auprc(y_true, torch.ravel(bin_counts_max(yp[do_eval], binsize)))
-            res_random = auprc(y_true, torch.ravel(bin_counts_max(yp_random, binsize)))
+            res = auprc(y_true, np.ravel(bin_counts_max(yp[do_eval], binsize)))
+            res_random = auprc(y_true, np.ravel(bin_counts_max(yp_random, binsize)))
         except Exception as e:
-            res = torch.tensor(float('nan'))
-            res_random = torch.tensor(float('nan'))
+            res = np.nan
+            res_random = np.nan
 
         results.append({
             "binsize": binsize,
@@ -413,7 +413,7 @@ def profile_pred(logps, true_counts):
             "imbalance": imbalance
         })
 
-    return pd.DataFrame(results)
+    return pd.DataFrame.from_dict(results)
 
 def permute_array(arr, axis=0):
     #Randomly permutes a tensor along a specified axis.
