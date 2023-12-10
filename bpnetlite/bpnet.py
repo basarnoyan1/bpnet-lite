@@ -165,8 +165,8 @@ class BPNet(torch.nn.Module):
 			"Validation Count Pearson", "Validation Count MSE", "Saved?"], 
 			verbose=verbose)
   
-		self.last_logps = None
-		self.last_true_count = None
+		self.last_yt = None
+		self.last_yp = None
 
 
 	def forward(self, X, X_ctl=None):
@@ -402,8 +402,8 @@ class BPNet(torch.nn.Module):
 						y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 						y_profile = y_profile.reshape(*z)
       
-						self.last_logps = y_profile
-						self.last_true_count = y_counts
+						self.last_yt = y_valid
+						self.last_yp = y_profile
 
 						measures = calculate_performance_measures(y_profile, 
 							y_valid, y_counts, kernel_sigma=7, 
@@ -456,5 +456,5 @@ class BPNet(torch.nn.Module):
 			if early_stopping is not None and early_stop_count >= early_stopping:
 				break
 		
-		wandb.Table(dataframe=profile_pred(self.last_logps, self.last_true_count))
+		wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
 		torch.save(self, "{}.final.torch".format(self.name))

@@ -352,17 +352,14 @@ def calculate_performance_measures(logps, true_counts, pred_log_counts,
 
     return measures_
 
-def profile_pred(logps, true_counts):
+def profile_pred(yt, yp):
     """
     The alternative performance evaluation method used in BPNet paper.
 
     Parameters
     ----------
-    logps: torch.tensor
-        A tensor of the predicted log probability values.
-
-    true_counts: torch.tensor
-        A tensor of the true values, usually integer counts.
+    yt: true profile
+    yp: predicted profile
     """
     
     pos_min_threshold = 0.05
@@ -371,12 +368,11 @@ def profile_pred(logps, true_counts):
     binsizes = [1, 2, 4, 10]
 
     # Convert log probabilities to probabilities
-    yp = torch.exp(logps)
-    do_eval = true_counts.sum(axis=1).mean(axis=1) > required_min_pos_counts / pos_min_threshold
+    do_eval = yt.sum(axis=1).mean(axis=1) > required_min_pos_counts / pos_min_threshold
 
     # Normalize probabilities and fractions
     yp = yp / yp.sum(dim=1, keepdim=True)
-    fracs = true_counts / true_counts.sum(axis=1, keepdims=True)
+    fracs = yt / yt.sum(axis=1, keepdims=True)
 
     # Random permutation for baseline comparison
     yp_random = permute_array(permute_array(yp[do_eval], axis=1), axis=0)
