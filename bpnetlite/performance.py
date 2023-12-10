@@ -429,9 +429,9 @@ def bin_counts_amb(y, binsize=2):
     xout = torch.zeros((y.shape[0], outlen, y.shape[2]), dtype=torch.float32)
     for i in range(outlen):
         iterval = y[:, (binsize * i):(binsize * (i + 1)), :]
-        has_amb = (iterval == -1).any(dim=1)
-        has_peak = (iterval == 1).any(dim=1)
-        xout[:, i, :] = (has_peak - (1 - has_peak) * has_amb).float()
+        has_amb = np.any(iterval == -1, axis=1)
+        has_peak = np.any(iterval == 1, axis=1)
+        xout[:, i, :] = (has_peak - (1 - has_peak) * has_amb).astype(float)
     return xout
 
 
