@@ -447,10 +447,27 @@ def bin_counts_max(y, binsize=2):
     return xout
 
 def auprc(y_true, y_pred):
-    # Compute the area under the precision-recall curve.
-    y_true_np = y_true.cpu().detach().numpy()
-    y_pred_np = y_pred.cpu().detach().numpy()
-    return average_precision_score(y_true_np, y_pred_np)
+    #Area under the precision-recall curve
+    y_true, y_pred = _mask_value_nan(y_true, y_pred)
+    return average_precision_score(y_true, y_pred)
+
+def _mask_nan(y_true, y_pred):
+    mask_array = ~np.isnan(y_true)
+    if np.any(np.isnan(y_pred)):
+        print("WARNING: y_pred contains {0}/{1} np.nan values. removing them...".
+              format(np.sum(np.isnan(y_pred)), y_pred.size))
+        mask_array = np.logical_and(mask_array, ~np.isnan(y_pred))
+    return y_true[mask_array], y_pred[mask_array]
+
+
+def _mask_value(y_true, y_pred, mask=-1):
+    mask_array = y_true != mask
+    return y_true[mask_array], y_pred[mask_array]
+
+
+def _mask_value_nan(y_true, y_pred, mask=-1):
+    y_true, y_pred = _mask_nan(y_true, y_pred)
+    return _mask_value(y_true, y_pred, mask)
 
 
 
