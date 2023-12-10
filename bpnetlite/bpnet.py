@@ -14,10 +14,8 @@ import torch
 
 import wandb
 
-from .losses import MNLLLoss
-from .losses import log1pMSELoss
-from .performance import pearson_corr
-from .performance import calculate_performance_measures
+from .losses import MNLLLoss, log1pMSELoss
+from .performance import pearson_corr, calculate_performance_measures, profile_pred
 from .logging import Logger
 
 from tqdm import tqdm
@@ -166,6 +164,9 @@ class BPNet(torch.nn.Module):
 			"Validation MNLL", "Validation Profile Pearson", 
 			"Validation Count Pearson", "Validation Count MSE", "Saved?"], 
 			verbose=verbose)
+  
+		self.last_logps = None
+		self.last_true_count = None
 
 
 	def forward(self, X, X_ctl=None):
@@ -400,6 +401,9 @@ class BPNet(torch.nn.Module):
 						y_profile = y_profile.reshape(y_profile.shape[0], -1)
 						y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 						y_profile = y_profile.reshape(*z)
+      
+						self.last_logps = y_profile
+						self.last_true_count = y_valid
 
 						measures = calculate_performance_measures(y_profile, 
 							y_valid, y_counts, kernel_sigma=7, 
@@ -451,88 +455,10 @@ class BPNet(torch.nn.Module):
 
 			if early_stopping is not None and early_stop_count >= early_stopping:
 				break
-
+		
+		wandb.Table(dataframe=profile_pred(self.last_logps, self.last_true_count))
 		torch.save(self, "{}.final.torch".format(self.name))
 
-
-	@classmethod
-	def from_chrombpnet_lite(cls, filename):
-		"""Loads a model from ChromBPNet-lite TensorFlow format.
-	
-		This method will load a ChromBPNet-lite model from TensorFlow format.
-		Note that this is not the same as ChromBPNet format. Specifically,
-		ChromBPNet-lite was a preceeding package that had a slightly different
-		saving format, whereas ChromBPNet is the packaged version of that
-		code that is applied at scale.
-
-		This method does not load the entire ChromBPNet model. If that is
-		the desired behavior, see the `ChromBPNet` object and its associated
-		loading functions. Instead, this loads a single BPNet model -- either
-		the bias model or the accessibility model, depending on what is encoded
-		in the stored file.
-
-
-		Parameters
-		----------
-		filename: str
-			The name of the h5 file that stores the trained model parameters.
-
-
-		Returns
-		-------
-		model: BPNet
-			A BPNet model compatible with this repository in PyTorch.
-		"""
-
-		h5 = h5py.File(filename, "r")
-		w = h5['model_weights']
-
-		if 'model_1' in w.keys():
-			w = w['model_1']
-			bias = False
-		else:
-			bias = True
-
-		k, b = 'kernel:0', 'bias:0'
-		name = "conv1d_{}_1" if not bias else "conv1d_{0}/conv1d_{0}"
-
-		layer_names = []
-		for layer_name in w.keys():
-			try:
-				idx = int(layer_name.split("_")[1])
-				layer_names.append(idx)
-			except:
-				pass
-
-		n_filters = w[name.format(1)][k].shape[2]
-		n_layers = max(layer_names) - 2
-
-		model = BPNet(n_layers=n_layers, n_filters=n_filters, n_outputs=1,
-			n_control_tracks=0, trimming=(2114-1000)//2)
-
-		convert_w = lambda x: torch.nn.Parameter(torch.tensor(
-			x[:]).permute(2, 1, 0))
-		convert_b = lambda x: torch.nn.Parameter(torch.tensor(x[:]))
-
-		model.iconv.weight = convert_w(w[name.format(1)][k])
-		model.iconv.bias = convert_b(w[name.format(1)][b])
-		model.iconv.padding = 12
-
-		for i in range(2, n_layers+2):
-			model.rconvs[i-2].weight = convert_w(w[name.format(i)][k])
-			model.rconvs[i-2].bias = convert_b(w[name.format(i)][b])
-
-		model.fconv.weight = convert_w(w[name.format(n_layers+2)][k])
-		model.fconv.bias = convert_b(w[name.format(n_layers+2)][b])
-		model.fconv.padding = 12
-
-		name = "logcounts_1" if not bias else "logcounts/logcounts"
-		model.linear.weight = torch.nn.Parameter(torch.tensor(w[name][k][:].T))
-		model.linear.bias = convert_b(w[name][b])
-		return model
-
-	@classmethod
-	def from_chrombpnet(cls, filename):
 		"""Loads a model from ChromBPNet TensorFlow format.
 	
 		This method will load one of the components of a ChromBPNet model
