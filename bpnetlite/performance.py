@@ -416,30 +416,31 @@ def permute_array(arr, axis=0):
     idx = torch.randperm(arr.size(axis))
     return arr.index_select(axis, idx)
 
-def bin_counts_amb(y, binsize=2):
-    #Bin the counts with handling for ambiguous cases.
+def bin_counts_max(x, binsize=2):
+    """Bin the counts
+    """
     if binsize == 1:
-        return y
-    assert len(y.shape) == 3
-    outlen = y.shape[1] // binsize
-    xout = torch.zeros((y.shape[0], outlen, y.shape[2]), dtype=torch.float32)
+        return x
+    assert len(x.shape) == 3
+    outlen = x.shape[1] // binsize
+    xout = np.zeros((x.shape[0], outlen, x.shape[2]))
     for i in range(outlen):
-        iterval = y[:, (binsize * i):(binsize * (i + 1)), :]
+        xout[:, i, :] = x[:, (binsize * i):(binsize * (i + 1)), :].max(1)
+    return xout
+
+def bin_counts_amb(x, binsize=2):
+    """Bin the counts
+    """
+    if binsize == 1:
+        return x
+    assert len(x.shape) == 3
+    outlen = x.shape[1] // binsize
+    xout = np.zeros((x.shape[0], outlen, x.shape[2])).astype(float)
+    for i in range(outlen):
+        iterval = x[:, (binsize * i):(binsize * (i + 1)), :]
         has_amb = np.any(iterval == -1, axis=1)
         has_peak = np.any(iterval == 1, axis=1)
         xout[:, i, :] = (has_peak - (1 - has_peak) * has_amb).astype(float)
-    return xout
-
-
-def bin_counts_max(y, binsize=2):
-    #Bin the counts by taking the maximum value in each bin.
-    if binsize == 1:
-        return y
-    assert len(y.shape) == 3
-    outlen = y.shape[1] // binsize
-    xout = torch.zeros((y.shape[0], outlen, y.shape[2]), dtype=torch.float32)
-    for i in range(outlen):
-        xout[:, i, :] = torch.max(y[:, (binsize * i):(binsize * (i + 1)), :], dim=1)[0]
     return xout
 
 def auprc(y_true, y_pred):
