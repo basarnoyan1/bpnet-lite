@@ -380,7 +380,7 @@ def profile_pred(yt, yp):
     results = []
     for binsize in binsizes:
         # Classify as peak, ambiguous, or non-peak
-        is_peak = (fracs >= pos_min_threshold).float()
+        is_peak = (fracs >= pos_min_threshold).astype(float)
         ambiguous = (fracs < pos_min_threshold) & (fracs >= neg_max_threshold)
         is_peak[ambiguous] = -1
 
