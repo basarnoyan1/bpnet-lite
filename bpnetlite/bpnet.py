@@ -9,7 +9,7 @@ stranded control track and makes predictions for stranded outputs.
 
 import h5py
 import time 
-import numpy
+import numpy as np
 import torch
 
 import wandb
@@ -255,7 +255,7 @@ class BPNet(torch.nn.Module):
 
 
 		with torch.no_grad():
-			starts = numpy.arange(0, X.shape[0], batch_size)
+			starts = np.arange(0, X.shape[0], batch_size)
 			ends = starts + batch_size
 
 			y_profiles, y_counts = [], []
@@ -396,14 +396,16 @@ class BPNet(torch.nn.Module):
 
 						tic = time.time()
 						y_profile, y_counts = self.predict(X_valid, X_ctl_valid)
+      
+						self.last_yt = np.transpose(y_valid,(0,2,1)).detach().cpu().numpy()
+						self.last_yp = softmax(y_profile.detach().cpu().numpy()) * np.exp(y_counts.detach().cpu().numpy()[:,np.newaxis]),
 
 						z = y_profile.shape
 						y_profile = y_profile.reshape(y_profile.shape[0], -1)
 						y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 						y_profile = y_profile.reshape(*z)
       
-						self.last_yt = y_valid.detach().cpu().numpy()
-						self.last_yp = y_profile.detach().cpu().numpy()
+						
 
 						measures = calculate_performance_measures(y_profile, 
 							y_valid, y_counts, kernel_sigma=7, 
@@ -420,8 +422,8 @@ class BPNet(torch.nn.Module):
 						self.logger.add([epoch, iteration, train_time, 
 							valid_time, profile_loss_, count_loss_, 
 							measures['profile_mnll'].mean().item(), 
-							numpy.nan_to_num(profile_corr).mean(),
-							numpy.nan_to_num(count_corr).mean(), 
+							np.nan_to_num(profile_corr).mean(),
+							np.nan_to_num(count_corr).mean(), 
 							measures['count_mse'].mean().item(),
 							(valid_loss < best_loss).item()])
 						
@@ -433,8 +435,8 @@ class BPNet(torch.nn.Module):
                          	"training_mnll": profile_loss_, 
                  			"training_count_mse": count_loss_,
                     		"valid_mnll": measures['profile_mnll'].mean().item(), 
-							"valid_profile_pearson": numpy.nan_to_num(profile_corr).mean(),
-							"valid_count_pearson": numpy.nan_to_num(count_corr).mean(), 
+							"valid_profile_pearson": np.nan_to_num(profile_corr).mean(),
+							"valid_count_pearson": np.nan_to_num(count_corr).mean(), 
 							"valid_count_mse": measures['count_mse'].mean().item(), 
       						"saved": (valid_loss < best_loss).item()})
 
@@ -458,3 +460,9 @@ class BPNet(torch.nn.Module):
 		
 		wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
 		torch.save(self, "{}.final.torch".format(self.name))
+  
+  
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)
