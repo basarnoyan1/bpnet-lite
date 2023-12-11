@@ -438,8 +438,8 @@ def bin_counts_amb(x, binsize=2):
     xout = np.zeros((x.shape[0], outlen, x.shape[2])).astype(float)
     for i in range(outlen):
         iterval = x[:, (binsize * i):(binsize * (i + 1)), :]
-        has_amb = np.any(iterval == -1, axis=1)
-        has_peak = np.any(iterval == 1, axis=1)
+        has_amb = np.any(a=(iterval == -1), axis=1)
+        has_peak = np.any(a=(iterval == 1), axis=1)
         xout[:, i, :] = (has_peak - (1 - has_peak) * has_amb).astype(float)
     return xout
 
