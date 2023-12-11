@@ -402,8 +402,8 @@ class BPNet(torch.nn.Module):
 						y_profile = torch.nn.functional.log_softmax(y_profile, dim=-1)
 						y_profile = y_profile.reshape(*z)
       
-						self.last_yt = y_valid
-						self.last_yp = y_profile
+						self.last_yt = y_valid.detach().cpu().numpy()
+						self.last_yp = y_profile.detach().cpu().numpy()
 
 						measures = calculate_performance_measures(y_profile, 
 							y_valid, y_counts, kernel_sigma=7, 
