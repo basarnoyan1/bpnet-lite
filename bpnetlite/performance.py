@@ -371,7 +371,7 @@ def profile_pred(yt, yp):
     do_eval = yt.sum(axis=1).mean(axis=1) > required_min_pos_counts / pos_min_threshold
 
     # Normalize probabilities and fractions
-    yp = yp / yp.sum(axis=1, keepdim=True)
+    yp = yp / yp.sum(axis=1, keepdims=True)
     fracs = yt / yt.sum(axis=1, keepdims=True)
 
     # Random permutation for baseline comparison
