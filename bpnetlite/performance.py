@@ -412,9 +412,15 @@ def profile_pred(yt, yp):
     return pd.DataFrame.from_dict(results)
 
 def permute_array(arr, axis=0):
-    #Randomly permutes a tensor along a specified axis.
-    idx = torch.randperm(arr.size(axis))
-    return arr.index_select(axis, idx)
+    """Permute array along a certain axis
+    Args:
+      arr: numpy array
+      axis: axis along which to permute the array
+    """
+    if axis == 0:
+        return np.random.permutation(arr)
+    else:
+        return np.random.permutation(arr.swapaxes(0, axis)).swapaxes(0, axis)
 
 def bin_counts_max(x, binsize=2):
     """Bin the counts
