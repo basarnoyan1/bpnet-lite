@@ -463,6 +463,7 @@ class BPNet(torch.nn.Module):
 				break
 		
 		eval_table = wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
+		print("Table is being printed")
 		print(eval_table)
 		wandb.log({"Profile evaluation results in table format": eval_table})
 		torch.save(self, "{}.final.torch".format(self.name))
