@@ -461,7 +461,7 @@ class BPNet(torch.nn.Module):
 			if early_stopping is not None and early_stop_count >= early_stopping:
 				break
 		
-		wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
+		wandb.log({"Profile evaluation results in table format":wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))})
 		torch.save(self, "{}.final.torch".format(self.name))
   
   
