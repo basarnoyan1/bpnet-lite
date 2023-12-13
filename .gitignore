@@ -1,2 +1,5 @@
 build
 wandb
+__pycache__
+"bpnet_lite.egg-info"
+.vscode

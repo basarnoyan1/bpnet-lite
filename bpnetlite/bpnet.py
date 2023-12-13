@@ -399,7 +399,9 @@ class BPNet(torch.nn.Module):
       
 						self.last_yt = np.transpose(y_valid,(0,2,1)).detach().cpu().numpy()
 						_tmp_y_profile = np.transpose(y_profile,(0,2,1))
-						self.last_yp = softmax(_tmp_y_profile.detach().cpu().numpy()) * np.exp(y_counts.detach().cpu().numpy()[:,np.newaxis]),
+						_a = softmax(_tmp_y_profile.detach().cpu().numpy()) 
+						_b = np.exp(y_counts.detach().cpu().numpy()[:,np.newaxis])
+						self.last_yp = _a * _b
 
 						z = y_profile.shape
 						y_profile = y_profile.reshape(y_profile.shape[0], -1)
