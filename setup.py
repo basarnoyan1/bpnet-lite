@@ -2,14 +2,14 @@ from setuptools import setup
 
 setup(
     name='bpnet-lite',
-    version='0.5.6',
-    author='Jacob Schreiber',
-    author_email='jmschreiber91@gmail.com',
+    version='0.7',
+    author='Basar Noyan (originally from Jacob Schreiber "jmschrei")',
+    author_email='basarnoyan1@gmail.com',
     packages=['bpnetlite'],
-    scripts=['bpnet', 'chrombpnet'],
-    url='https://github.com/jmschrei/bpnet-lite',
+    scripts=['bpnet'],
+    url='https://github.com/basarnoyan1/bpnet-lite',
     license='LICENSE.txt',
-    description='bpnet-lite is a minimal implementation of BPNet, a neural network aimed at interpreting regulatory activity of the genome.',
+    description='Modified bpnet-lite fork from jmschrei/bpnet-lite',
     install_requires=[
         "numpy >= 1.14.2",
         "scipy >= 1.0.0",
@@ -21,7 +21,7 @@ setup(
         "tqdm >= 4.64.1",
         "numba >= 0.55.1",
         "logomaker",
-        "captum == 0.5.0",
+        "captum >= 0.5.0",
         "seaborn >= 0.11.2",
         "modisco-lite >= 2.0.0",
         "wandb"

@@ -3,11 +3,10 @@
 # Code adapted from Avanti Shrikumar and Ziga Avsec
 
 from .bpnet import BPNet
-from .chrombpnet import ChromBPNet
 import wandb
 
 wandb.init(
     project="bpnet-lite-test",
 )
 
-__version__ = '0.5.6'
+__version__ = '0.7.0'
