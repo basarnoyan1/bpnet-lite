@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 import wandb
+import pandas
 
 from .losses import MNLLLoss, log1pMSELoss
 from .performance import pearson_corr, calculate_performance_measures, profile_pred
@@ -461,7 +462,9 @@ class BPNet(torch.nn.Module):
 			if early_stopping is not None and early_stop_count >= early_stopping:
 				break
 		
-		wandb.log({"Profile evaluation results in table format":wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))})
+		eval_table = wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
+		print(eval_table)
+		wandb.log({"Profile evaluation results in table format": eval_table})
 		torch.save(self, "{}.final.torch".format(self.name))
   
   
