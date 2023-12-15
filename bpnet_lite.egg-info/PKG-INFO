@@ -1,9 +1,9 @@
 Metadata-Version: 2.1
 Name: bpnet-lite
-Version: 0.5.6
-Summary: bpnet-lite is a minimal implementation of BPNet, a neural network aimed at interpreting regulatory activity of the genome.
-Home-page: https://github.com/jmschrei/bpnet-lite
-Author: Jacob Schreiber
-Author-email: jmschreiber91@gmail.com
+Version: 0.7
+Summary: Modified bpnet-lite fork from jmschrei/bpnet-lite
+Home-page: https://github.com/basarnoyan1/bpnet-lite
+Author: Basar Noyan (originally from Jacob Schreiber "jmschrei")
+Author-email: basarnoyan1@gmail.com
 License: LICENSE.txt
 License-File: LICENSE

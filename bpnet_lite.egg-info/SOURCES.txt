@@ -1,7 +1,6 @@
 LICENSE
 README.md
 bpnet
-chrombpnet
 setup.py
 bpnet_lite.egg-info/PKG-INFO
 bpnet_lite.egg-info/SOURCES.txt
@@ -11,7 +10,6 @@ bpnet_lite.egg-info/top_level.txt
 bpnetlite/__init__.py
 bpnetlite/attributions.py
 bpnetlite/bpnet.py
-bpnetlite/chrombpnet.py
 bpnetlite/hit_calling.py
 bpnetlite/io.py
 bpnetlite/logging.py
