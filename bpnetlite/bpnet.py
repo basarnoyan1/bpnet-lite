@@ -462,11 +462,14 @@ class BPNet(torch.nn.Module):
 			if early_stopping is not None and early_stop_count >= early_stopping:
 				break
 		
-		eval_table = wandb.Table(dataframe=profile_pred(self.last_yt, self.last_yp))
+		pred_result = profile_pred(self.last_yt, self.last_yp)
+		eval_table = wandb.Table(dataframe=pred_result)
 		print("Table is being printed")
 		print(eval_table)
 		wandb.log({"Profile evaluation results in table format": eval_table})
 		torch.save(self, "{}.final.torch".format(self.name))
+		return pred_result
+		
   
   
 def softmax(x):
